@@ -1,0 +1,49 @@
+before_script:
+  - mvn -v 
+  - which mvn
+  - jfrog -v 
+  - which jfrog
+  - java -version
+  - which java
+
+stages:
+  - compile
+  - test
+  - package
+  - release
+
+compile:
+  tags:
+    - java
+  stage: compile
+  script:
+    - gitlab-ci.sh projectName
+
+test:
+  tags:
+    - java
+  stage: test
+  script:
+    - gitlab-ci.sh projectName
+
+package:
+  tags:
+    - java
+  stage: package
+  cache:
+    paths:
+      - target/projectName*.jar
+      - pom.xml
+  script:
+    - gitlab-ci.sh projectName
+
+release:
+  tags:
+    - java
+  stage: release
+  cache:
+    paths:
+      - target/projectName*.jar
+      - pom.xml
+  script:
+    - gitlab-ci.sh projectName maven
