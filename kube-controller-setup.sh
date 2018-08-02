@@ -64,6 +64,8 @@ then # General Things to install
      systemctl enable sshd
      systemctl start sshd
      firewall-cmd --permanent --add-service=http
+     firewall-cmd --permanent --add-service=https
+
      systemctl reload firewalld
      
      yum install postfix
