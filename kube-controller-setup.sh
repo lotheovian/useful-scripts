@@ -24,16 +24,16 @@ unset yn
 read -p "setup users? y[N]: " yn
 
 if [[ $yn == [Yy] ]]
-   while true
-   do unset user
-      read -p "please enter a username to add or just hit enter to continue: " user
-      [ -z "$user" ] && break
-      if [ ! -d /home/$user ]
-      then useradd $user
-      else echo $user already exists
-      fi
-      add_ssh_key
-   done
+then while true
+     do unset user
+        read -p "please enter a username to add or just hit enter to continue: " user
+        [ -z "$user" ] && break
+        if [ ! -d /home/$user ]
+        then useradd $user
+        else echo $user already exists
+        fi
+        add_ssh_key
+     done
 fi
 
 unset yn
