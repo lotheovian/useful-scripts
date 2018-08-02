@@ -20,24 +20,33 @@ function add_ssh_key() {
    fi
 }
 
-while true
-do unset user
-   read -p "please enter a username to add or just hit enter to continue: " user
-   [ -z "$user" ] && break
-   if [ ! -d /home/$user ]
-   then useradd $user
-   else echo $user already exists
-   fi
-   add_ssh_key
-done
+unset yn
+read -p "setup users? y[N]: " yn
 
+if [[ $yn == [Yy] ]]
+   while true
+   do unset user
+      read -p "please enter a username to add or just hit enter to continue: " user
+      [ -z "$user" ] && break
+      if [ ! -d /home/$user ]
+      then useradd $user
+      else echo $user already exists
+      fi
+      add_ssh_key
+   done
+fi
+
+unset yn
 read -p "users all setup, install packages? y[N]: " yn
 
 if [[ $yn == [Yy] ]]
 then # General Things to install
      yum check-update
      yum install epel-release  # The extended official repository
-     yum install git wget curl python3-pip nginx
+     yum install git wget curl python3-pip nginx firewalld 
+     systemctl start firewalld
+     firewall-cmd --permanent --add-service=ssh
+     systemctl reload firewalld
      
      # Kops and Kubectl
      # https://github.com/kubernetes/kops/blob/master/docs/install.md
@@ -51,16 +60,15 @@ then # General Things to install
      pip install awscli
      
      # Gitlab Installation
-     sudo yum install -y curl policycoreutils-python openssh-server
-     sudo systemctl enable sshd
-     sudo systemctl start sshd
+     yum install -y curl policycoreutils-python openssh-server
+     systemctl enable sshd
+     systemctl start sshd
+     firewall-cmd --permanent --add-service=http
+     systemctl reload firewalld
      
-     sudo firewall-cmd --permanent --add-service=http
-     sudo systemctl reload firewalld
-     
-     sudo yum install postfix
-     sudo systemctl enable postfix
-     sudo systemctl start postfix
+     yum install postfix
+     systemctl enable postfix
+     systemctl start postfix
      curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.rpm.sh | sudo bash
      while true
      do unset gitlab_hostname yn
