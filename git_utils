@@ -1,0 +1,108 @@
+#!/bin/bash
+exe_name="$(basename $0)"
+functions="git_utils gbranch gpush gpull"
+
+get_project_name () {
+  git remote -v|head -n 1|sed -e 's/.*\/\(.*\)\.git.*/\1/'
+}
+
+display_branches() {
+   project_name="$(get_project_name)"
+   printf "Project: \x1b[32m%s\x1b[0m\n" "$project_name"
+   branches=`git branch --list`
+   while read -r branch
+   do clean_branch_name=${branch//\*\ /}
+      description=`git config branch.$clean_branch_name.description`
+      if [ "${branch::1}" == "*" ]
+      then printf "%-15s %s\n"   "$branch" "$description"
+      else printf "  %-13s %s\n" "$branch" "$description"
+      fi
+   done <<< "$branches"
+}
+
+get_current_branch() {
+   branches=`git branch --list`
+   while read -r branch
+   do
+      if [ "${branch::1}" == "*" ]
+      then clean_branch_name=${branch//\*\ /}
+           printf "%s" "$clean_branch_name"
+           break
+      fi
+   done <<< "$branches"
+}
+
+
+# External ref functions
+function git_utils() {
+   if [ "$1" == "setup" ]
+   then mkdir -p ~/bin
+        if [ ! -f ~/bin/git_utils ]
+        then cp $0 ~/bin/git_utils
+        fi
+        for func in $functions
+        do if [ ! -f ~/bin/$func ]
+           then ln -s ~/bin/git_utils ~/bin/$func
+           fi
+        done
+   else echo "git_utils - Shortcuts for git cli"
+        echo 'Usage: git_utils [setup]'
+        echo 'Commands provided when setup'
+        for func in $functions
+        do echo $func
+        done
+        exit 0
+   fi
+}        
+
+function gbranch() {
+   if [ $# -gt 2 ]
+   then echo 'Too Many Parameters. Usage: gbranch [branch_name ["description"]]'
+        exit 2
+   fi
+   
+   if [ $# == 0 ]
+   then display_branches
+   else branch=`get_current_branch`
+        if [ "$branch" != "$1" ]
+        then if ! git checkout $1 2> /dev/null
+             then read -p "Create a new branch $1? [Y/n] " x
+                  if [[ "$x" == [Yy] ]]
+                  then git checkout -b $1
+                       if [ $? -eq 0 ]
+                       then if [ "$2" ]
+                            then git config branch.$1.description "$2"
+                            fi
+                       fi
+                  fi
+             fi
+        else if [ "$2" ]
+             then git config branch.$1.description "$2"
+             fi
+        fi
+        display_branches
+   fi
+}
+
+function gpush() {
+   if [ $# -ne 1 ]
+   then echo 'Invalid parameters. Usage: gpush branch_name'
+        exit 2
+   fi
+   git push origin $1
+}
+
+function gpull() {
+   if [ $# -ne 1 ]
+   then echo 'Invalid parameters. Usage: gpull branch_name'
+        exit 2
+   fi
+   git pull origin $1
+}
+
+
+if ! grep -w "$exe_name" <<< "$functions" &> /dev/null
+then echo unknown function $exe_name
+     exit 1
+fi
+$exe_name $*
