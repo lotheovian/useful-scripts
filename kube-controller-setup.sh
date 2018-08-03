@@ -43,7 +43,7 @@ if [[ $yn == [Yy] ]]
 then # General Things to install
      yum check-update
      yum install epel-release  # The extended official repository
-     yum install git wget curl python3-pip nginx firewalld 
+     yum install git wget curl python3-pip nginx firewalld vim
      systemctl start firewalld
      firewall-cmd --permanent --add-service=ssh
      systemctl reload firewalld
