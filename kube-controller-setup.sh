@@ -8,15 +8,15 @@ fi
 set -e
 
 function add_ssh_key() {
-   mkdir -p ~$user/.ssh
-   chown -Rf $user:$user ~$user/.ssh
-   chmod 700 ~$user/.ssh
+   mkdir -p /home/$user/.ssh
+   chown -Rf $user:$user /home/$user/.ssh
+   chmod 700 /home/$user/.ssh
 
    read -p "please enter a SSH Key to add or enter to skip: " ssh_key
 
    if [ -n "$ssh_key" ]
-   then echo "$ssh_key" >> ~$user/.ssh/authorized_keys
-        chmod 600 ~$user/.ssh/authorized_keys
+   then echo "$ssh_key" >> /home/$user/.ssh/authorized_keys
+        chmod 600 /home/$user/.ssh/authorized_keys
    fi
 }
 
