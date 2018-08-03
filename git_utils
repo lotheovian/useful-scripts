@@ -1,12 +1,33 @@
 #!/bin/bash
 exe_name="$(basename $0)"
-functions="git_utils gbranch gpush gpull"
+functions="git_utils gbranch gpush gpull gmerge gdiff gcheckout"
+
+get_yn() {
+   # $1 should be -y or -n
+   # $2 should be the yn message
+   
+   #Get the default yn flag
+   default_yn="$(echo ${1:1:1}|tr a-z A-Z)"
+   other_yn="$(grep -o "[^$default_yn]" <<< "YN"|tr A-Z a-z)"
+   read -p "$2 $other_yn[$default_yn]: " yn
+   response_yn="$(echo ${yn}|tr A-Z a-z)"
+   # Return if the response was the optional choice 
+   # If -y is passed and anything other than N is entered, it will return true
+   # If -n is passed and anything other than Y is entered, it will return true
+   [ "$other_yn" == "$response_yn" ]
+}
+
+master_protect() {
+   if [ "$(get_current_branch)" == "master" ]
+   then test ! get_yn -n "Are you sure you want to $exe_name in master?"
+   fi
+}
 
 get_project_name () {
   git remote -v|head -n 1|sed -e 's/.*\/\(.*\)\.git.*/\1/'
 }
 
-display_branches() {
+display_branches () {
    project_name="$(get_project_name)"
    printf "Project: \x1b[32m%s\x1b[0m\n" "$project_name"
    branches=`git branch --list`
@@ -20,7 +41,7 @@ display_branches() {
    done <<< "$branches"
 }
 
-get_current_branch() {
+get_current_branch () {
    branches=`git branch --list`
    while read -r branch
    do
@@ -36,15 +57,31 @@ get_current_branch() {
 # External ref functions
 function git_utils() {
    if [ "$1" == "setup" ]
-   then mkdir -p ~/bin
-        if [ ! -f ~/bin/git_utils ]
-        then cp $0 ~/bin/git_utils
+   then echo setting up git_utils
+        if [ ! -d ~/bin ]
+        then echo making ~/bin
+             mkdir -p ~/bin || exit 1
+             
         fi
+        if [ ! -f ~/bin/git_utils ]
+        then echo coping git_utils into ~/bin
+             cp $0 ~/bin/git_utils || exit 1
+        fi
+
+        if ! grep "$HOME/bin" <<< "$PATH" &> /dev/null && ! grep '^PATH+\?=' ~/.bash_profile|grep '$HOME/bin' &> /dev/null
+        then echo 'adding $HOME/bin to $PATH in ~/.bash_profile'
+             echo 'PATH+=:$HOME/bin' >> ~/.bash_profile || exit 1
+             echo 'export PATH' >> ~/.bash_profile || exit 1
+             source ~/.bash_profile || exit 1
+        fi
+             
         for func in $functions
         do if [ ! -f ~/bin/$func ]
-           then ln -s ~/bin/git_utils ~/bin/$func
+           then ln -s ~/bin/git_utils ~/bin/$func || exit 1
+                echo "adding symlink for $func function"
            fi
         done
+        echo git_utils should now be available
    else echo "git_utils - Shortcuts for git cli"
         echo 'Usage: git_utils [setup]'
         echo 'Commands provided when setup'
@@ -85,19 +122,38 @@ function gbranch() {
 }
 
 function gpush() {
-   if [ $# -ne 1 ]
-   then echo 'Invalid parameters. Usage: gpush branch_name'
-        exit 2
+   branch=$1
+   if [ -z "$branch" ]
+   then branch="$(get_current_branch)"
    fi
-   git push origin $1
+   git push origin $branch
 }
 
 function gpull() {
+   branch=$1
+   if [ -z "$branch" ]
+   then branch="$(get_current_branch)"
+   fi
+   git fetch
+   git pull origin $branch
+}
+
+function gmerge() {
    if [ $# -ne 1 ]
-   then echo 'Invalid parameters. Usage: gpull branch_name'
+   then echo 'Invalid parameters. Usage: gmerge branch_name'
         exit 2
    fi
-   git pull origin $1
+   if master_protect
+   then git merge $1
+   fi
+}
+
+function gdiff() {
+   git diff $*
+}
+
+function gcheckout() {
+   git checkout $*
 }
 
 
