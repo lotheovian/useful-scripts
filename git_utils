@@ -1,6 +1,18 @@
 #!/bin/bash
 exe_name="$(basename $0)"
-functions="git_utils gbranch gpush gpull gmerge gdiff gcheckout"
+functions="git_utils gbranch gpush gpull gmerge gdiff gcheckout gu gstatus gcommit gadd"
+
+
+branch_name=""
+project_name=""
+staged_count=""
+modified_count=""
+untracked_count=""
+deleted_count=""
+get_git_repo_status() {
+   branch_name="$(get_branch_name)"
+   project_name="$(get_project_name)"
+}
 
 get_yn() {
    # $1 should be -y or -n
@@ -105,17 +117,16 @@ function gbranch() {
         then if ! git checkout $1 2> /dev/null
              then read -p "Create a new branch $1? [Y/n] " x
                   if [[ "$x" == [Yy] ]]
-                  then git checkout -b $1
-                       if [ $? -eq 0 ]
+                  then if git checkout -b $1
                        then if [ "$2" ]
                             then git config branch.$1.description "$2"
                             fi
                        fi
                   fi
              fi
-        else if [ "$2" ]
-             then git config branch.$1.description "$2"
-             fi
+        fi
+        if [ "$2" ]
+        then git config branch.$1.description "$2"
         fi
         display_branches
    fi
@@ -156,9 +167,33 @@ function gcheckout() {
    git checkout $*
 }
 
+function gstatus() {
+   git status
+}
+
+function gcommit() {
+   git commit -m "$@"
+}
+
+function gadd() {
+   git add "$@"
+}
+
+function gu() {
+   # Graphical UI
+   while true
+   do clear
+      echo "Git Utilities Menu ($(get_project_name))"
+      echo
+      echo "1. Branches ($(get_current_branch))"
+      echo "2. Current Changes (s: t: u: )"
+   done
+}
+
 
 if ! grep -w "$exe_name" <<< "$functions" &> /dev/null
 then echo unknown function $exe_name
      exit 1
 fi
-$exe_name $*
+
+$exe_name "$@"
