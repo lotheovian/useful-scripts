@@ -1,7 +1,9 @@
 #!/bin/bash
 app_name="dev_utils"
 exe_name="$(basename $0)"
-functions="${app_name} gbranch gpush gpull gmerge gdiff gcheckout dps drm dstart dkill dbuild"
+functions="${app_name} \
+           gbranch gpush gpull gmerge gdiff gcheckout \
+           dps drm dstart dkill dbuild"
 
 ############################################
 ############# GLOBAL FUNCTIONS #############
@@ -63,6 +65,17 @@ get_yn() {
 ############## GIT FUNCTIONS ###############
 ############################################
 
+branch_name=""
+project_name=""
+staged_count=""
+modified_count=""
+untracked_count=""
+deleted_count=""
+get_git_repo_status() {
+   branch_name="$(get_branch_name)"
+   project_name="$(get_project_name)"
+}
+
 master_protect() {
    if [ "$(get_current_branch)" == "master" ]
    then test ! get_yn -n "Are you sure you want to $exe_name in master?"
@@ -114,17 +127,16 @@ function gbranch() {
         then if ! git checkout $1 2> /dev/null
              then read -p "Create a new branch $1? [Y/n] " x
                   if [[ "$x" == [Yy] ]]
-                  then git checkout -b $1
-                       if [ $? -eq 0 ]
+                  then if git checkout -b $1
                        then if [ "$2" ]
                             then git config branch.$1.description "$2"
                             fi
                        fi
                   fi
              fi
-        else if [ "$2" ]
-             then git config branch.$1.description "$2"
-             fi
+        fi
+        if [ "$2" ]
+        then git config branch.$1.description "$2"
         fi
         display_branches
    fi
@@ -163,6 +175,25 @@ function gdiff() {
 
 function gcheckout() {
    git checkout $*
+}
+
+function gstatus() {
+   git status
+}
+
+function gadd() {
+   git add "$@"
+}
+
+function gu() {
+   # Graphical UI
+   while true
+   do clear
+      echo "Git Utilities Menu ($(get_project_name))"
+      echo
+      echo "1. Branches ($(get_current_branch))"
+      echo "2. Current Changes (s: t: u: )"
+   done
 }
 
 ############################################
@@ -209,4 +240,4 @@ if ! grep -w "$exe_name" <<< "$functions" &> /dev/null
 then echo unknown function $exe_name
      exit 1
 fi
-$exe_name $*
+$exe_name "$@"
