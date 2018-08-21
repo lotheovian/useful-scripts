@@ -1,18 +1,48 @@
 #!/bin/bash
+app_name="dev_utils"
 exe_name="$(basename $0)"
-functions="git_utils gbranch gpush gpull gmerge gdiff gcheckout gu gstatus gcommit gadd"
+functions="${app_name} gbranch gpush gpull gmerge gdiff gcheckout dps drm dstart dkill dbuild"
 
+############################################
+############# GLOBAL FUNCTIONS #############
+############################################
 
-branch_name=""
-project_name=""
-staged_count=""
-modified_count=""
-untracked_count=""
-deleted_count=""
-get_git_repo_status() {
-   branch_name="$(get_branch_name)"
-   project_name="$(get_project_name)"
-}
+function dev_utils() {
+   if [ "$1" == "setup" ]
+   then echo setting up ${app_name}
+        if [ ! -d ~/bin ]
+        then echo making ~/bin
+             mkdir -p ~/bin || exit 1
+             
+        fi
+        if [ ! -f ~/bin/${app_name} ]
+        then echo coping ${app_name} into ~/bin
+             cp $0 ~/bin/${app_name} || exit 1
+        fi
+
+        if ! grep "$HOME/bin" <<< "$PATH" &> /dev/null && ! grep '^PATH+\?=' ~/.bash_profile|grep '$HOME/bin' &> /dev/null
+        then echo 'adding $HOME/bin to $PATH in ~/.bash_profile'
+             echo 'PATH+=:$HOME/bin' >> ~/.bash_profile || exit 1
+             echo 'export PATH' >> ~/.bash_profile || exit 1
+             source ~/.bash_profile || exit 1
+        fi
+             
+        for func in $functions
+        do if [ ! -f ~/bin/$func ]
+           then ln -s ~/bin/${app_name} ~/bin/$func || exit 1
+                echo "adding symlink for $func function"
+           fi
+        done
+        echo ${app_name} should now be available
+   else echo "${app_name} - Shortcuts for git cli"
+        echo 'Usage: ${app_name} [setup]'
+        echo 'Commands provided when setup'
+        for func in $functions
+        do echo $func
+        done
+        exit 0
+   fi
+}        
 
 get_yn() {
    # $1 should be -y or -n
@@ -28,6 +58,10 @@ get_yn() {
    # If -n is passed and anything other than Y is entered, it will return true
    [ "$other_yn" == "$response_yn" ]
 }
+
+############################################
+############## GIT FUNCTIONS ###############
+############################################
 
 master_protect() {
    if [ "$(get_current_branch)" == "master" ]
@@ -66,43 +100,6 @@ get_current_branch () {
 }
 
 
-# External ref functions
-function git_utils() {
-   if [ "$1" == "setup" ]
-   then echo setting up git_utils
-        if [ ! -d ~/bin ]
-        then echo making ~/bin
-             mkdir -p ~/bin || exit 1
-             
-        fi
-        if [ ! -f ~/bin/git_utils ]
-        then echo coping git_utils into ~/bin
-             cp $0 ~/bin/git_utils || exit 1
-        fi
-
-        if ! grep "$HOME/bin" <<< "$PATH" &> /dev/null && ! grep '^PATH+\?=' ~/.bash_profile|grep '$HOME/bin' &> /dev/null
-        then echo 'adding $HOME/bin to $PATH in ~/.bash_profile'
-             echo 'PATH+=:$HOME/bin' >> ~/.bash_profile || exit 1
-             echo 'export PATH' >> ~/.bash_profile || exit 1
-             source ~/.bash_profile || exit 1
-        fi
-             
-        for func in $functions
-        do if [ ! -f ~/bin/$func ]
-           then ln -s ~/bin/git_utils ~/bin/$func || exit 1
-                echo "adding symlink for $func function"
-           fi
-        done
-        echo git_utils should now be available
-   else echo "git_utils - Shortcuts for git cli"
-        echo 'Usage: git_utils [setup]'
-        echo 'Commands provided when setup'
-        for func in $functions
-        do echo $func
-        done
-        exit 0
-   fi
-}        
 
 function gbranch() {
    if [ $# -gt 2 ]
@@ -117,16 +114,17 @@ function gbranch() {
         then if ! git checkout $1 2> /dev/null
              then read -p "Create a new branch $1? [Y/n] " x
                   if [[ "$x" == [Yy] ]]
-                  then if git checkout -b $1
+                  then git checkout -b $1
+                       if [ $? -eq 0 ]
                        then if [ "$2" ]
                             then git config branch.$1.description "$2"
                             fi
                        fi
                   fi
              fi
-        fi
-        if [ "$2" ]
-        then git config branch.$1.description "$2"
+        else if [ "$2" ]
+             then git config branch.$1.description "$2"
+             fi
         fi
         display_branches
    fi
@@ -167,33 +165,48 @@ function gcheckout() {
    git checkout $*
 }
 
-function gstatus() {
-   git status
+############################################
+########### DOCKER FUNCTIONS ###############
+############################################
+
+function dps() {
+   echo running docker ps
+   sudo docker ps
 }
 
-function gcommit() {
-   git commit -m "$@"
+function dbuild() {
+   echo running docker build
+   sudo docker build "$@" .
 }
 
-function gadd() {
-   git add "$@"
-}
-
-function gu() {
-   # Graphical UI
-   while true
-   do clear
-      echo "Git Utilities Menu ($(get_project_name))"
-      echo
-      echo "1. Branches ($(get_current_branch))"
-      echo "2. Current Changes (s: t: u: )"
+function dkill() {
+   containers="$(sudo docker ps|grep -v '^CONTAIN'|cut -d' ' -f 1)"
+   for container in $containers
+   do echo killing $container
+      sudo docker kill $container
    done
 }
 
+function drm() {
+   images="$(sudo docker image ls|grep -v '^REPOSITORY'|tr -s ' '|grep '^[^ ]\+ <none> .*'|cut -d ' ' -f 3)"
+   for image in $images
+   do echo deleting $image
+      sudo docker rmi -f $image
+   done 
+}
+
+function dstart() {
+   last_image="$(sudo docker image ls |grep -v '^REPOSITORY'|head -n 1|tr -s ' ' |cut -d ' ' -f 3)"
+   echo starting docker image $last_image
+   sudo docker run "$@" $last_image
+}
+
+############################################
+###########       MAIN       ###############
+############################################
 
 if ! grep -w "$exe_name" <<< "$functions" &> /dev/null
 then echo unknown function $exe_name
      exit 1
 fi
-
-$exe_name "$@"
+$exe_name $*
