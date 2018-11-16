@@ -37,8 +37,8 @@ function dev_utils() {
         done
         echo ${app_name} should now be available
    else echo "${app_name} - Shortcuts for git cli"
-        echo 'Usage: ${app_name} [setup]'
-        echo 'Commands provided when setup'
+        echo "Usage: ${app_name} [setup]"
+        echo "Commands provided when setup"
         for func in $functions
         do echo $func
         done
