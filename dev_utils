@@ -170,7 +170,10 @@ function gmerge() {
 }
 
 function gdiff() {
-   git diff $*
+   if [ -z "$*" ]
+   then git diff `git merge-base master HEAD` HEAD
+   else git diff $*
+   fi
 }
 
 function gcheckout() {
